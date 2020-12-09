@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks Condition="'$(OS)' == 'Windows_NT'">netcoreapp2.1;netcoreapp3.1;net461</TargetFrameworks>
+    <TargetFrameworks Condition="'$(OS)' == 'Windows_NT'">netcoreapp3.1;net461</TargetFrameworks>
     <TargetFrameworks Condition="'$(OS)' == 'Unix'">netcoreapp3.1</TargetFrameworks>
     <AssemblyName>Consul.Test</AssemblyName>
     <PackageId>Consul.Test</PackageId>
@@ -28,6 +28,7 @@
     <PackageReference Include="Xunit.SkippableFact" Version="1.3.12" />
     <PackageReference Include="FluentAssertions" Version="5.10.3" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="1.0.2" />
+    <PackageReference Include="GitHubActionsTestLogger" Version="1.1.0" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp2.1' OR '$(TargetFramework)' == 'netcoreapp3.1' ">
