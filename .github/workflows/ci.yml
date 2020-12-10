@@ -4,10 +4,23 @@ on:
   push:
 
 jobs:
+  setup:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Install pandas
+        run: pip3 install pandas
+      - name: Build matrix
+        id: build-matrix
+        run: echo ::set-output name=matrix::'{"os":["ubuntu-18.04","windows-2019","macos-10.15"],"component":["Consul","Consul.AspNetCore"],"consul":["1.6.10","1.7.10","1.8.6","1.9.0"],"dotnet":["2.1.811","3.1.404","5.0.101"],"exclude":[{"component":"Consul.AspNetCore","consul":"1.7.10"},{"component":"Consul.AspNetCore","consul":"1.8.6"},{"component":"Consul.AspNetCore","consul":"1.9.0"},{"component":"Consul.AspNetCore","dotnet":"2.1.811"}],"include":[{"os":"windows-2019","component":"Consul","dotnet":"4.7","consul":"1.6.10"},{"os":"windows-2019","component":"Consul","dotnet":"4.7","consul":"1.7.10"},{"os":"windows-2019","component":"Consul","dotnet":"4.7","consul":"1.8.6"},{"os":"windows-2019","component":"Consul","dotnet":"4.7","consul":"1.9.0"}]}'
+    outputs:
+      matrix: ${{ steps.build-matrix.outputs.matrix }}
+
   build:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id
+    needs: setup
     strategy:
-      matrix: ${{ fromJson('{"os":["ubuntu-18.04","windows-2019","macos-10.15"],"component":["Consul","Consul.AspNetCore"],"consul":["1.6.10","1.7.10","1.8.6","1.9.0"],"dotnet":["2.1.811","3.1.404","5.0.101"],"exclude":[{"component":"Consul.AspNetCore","consul":"1.7.10"},{"component":"Consul.AspNetCore","consul":"1.8.6"},{"component":"Consul.AspNetCore","consul":"1.9.0"},{"component":"Consul.AspNetCore","dotnet":"2.1.811"}],"include":[{"os":"windows-2019","component":"Consul","dotnet":"4.7","consul":"1.6.10"},{"os":"windows-2019","component":"Consul","dotnet":"4.7","consul":"1.7.10"},{"os":"windows-2019","component":"Consul","dotnet":"4.7","consul":"1.8.6"},{"os":"windows-2019","component":"Consul","dotnet":"4.7","consul":"1.9.0"}]}') }}
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
