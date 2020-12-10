@@ -25,6 +25,19 @@ jobs:
           - os: windows-2019
             component: Consul
             dotnet: "4.7"
+            consul: 1.6.10
+          - os: windows-2019
+            component: Consul
+            dotnet: "4.7"
+            consul: 1.7.10
+          - os: windows-2019
+            component: Consul
+            dotnet: "4.7"
+            consul: 1.8.6
+          - os: windows-2019
+            component: Consul
+            dotnet: "4.7"
+            consul: 1.9.0
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
