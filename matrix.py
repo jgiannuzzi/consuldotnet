@@ -17,7 +17,7 @@ def load_matrix(data):
 
 
 def main():
-    config = yaml.safe_load(os.environ.get('INPUT_CONFIG')
+    config = yaml.safe_load(os.environ.get('INPUT_CONFIG'))
 
     matrix = load_matrix(config['matrix'])
 
