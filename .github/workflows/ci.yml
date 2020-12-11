@@ -9,7 +9,9 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - name: Install dependencies
-        run: pip3 install pandas pyyaml
+        run: |
+          pip3 install setuptools
+          pip3 install pandas pyyaml
       - name: Build matrix
         id: build-matrix
         run: ./matrix.py
