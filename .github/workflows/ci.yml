@@ -17,6 +17,29 @@ jobs:
       - name: Build matrix
         id: build-matrix
         run: ./matrix.py
+        env:
+          INPUT_CONFIG: |
+            matrix:
+              os: [ubuntu-18.04, windows-2019, macos-10.15]
+              component: [Consul, Consul.AspNetCore]
+              dotnet: [3.1.404, 5.0.101]
+            operations:
+              - type: merge
+                match: [component]
+                matrix:
+                  component: [Consul]
+                  consul: [1.6.10, 1.7.10, 1.8.6, 1.9.0]
+              - type: add
+                match: [component]
+                matrix:
+                  component: [Consul]
+                  dotnet: [2.1.811]
+              - type: add
+                match: [os, component]
+                matrix:
+                  os: [windows-2019]
+                  component: [Consul]
+                  dotnet: ["4.7"]
     outputs:
       matrix: ${{ steps.build-matrix.outputs.matrix }}
 
