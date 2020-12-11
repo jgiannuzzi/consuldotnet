@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Install dependencies
         run: |
-          pip3 install setuptools
+          pip3 install wheel setuptools
           pip3 install pandas pyyaml
       - name: Build matrix
         id: build-matrix
