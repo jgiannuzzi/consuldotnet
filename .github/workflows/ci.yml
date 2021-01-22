@@ -4,25 +4,19 @@ on:
   push:
 
 jobs:
-  setup:
+  setup-build-matrix:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id
     runs-on: ubuntu-18.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Install dependencies
-        run: |
-          pip3 install wheel setuptools
-          pip3 install pandas pyyaml
       - name: Build matrix
         id: build-matrix
-        run: ./matrix.py
-        env:
-          INPUT_CONFIG: |
+        uses: jgiannuzzi/setup-build-matrix@v1
+        with:
+          config: |
             matrix:
-              os: [ubuntu-18.04, windows-2019, macos-10.15]
+              os: [ubuntu-18.04, ubuntu-20.04, windows-2016, windows-2019, macos-10.15, macos-11.0]
               component: [Consul, Consul.AspNetCore]
-              dotnet: [3.1.404, 5.0.101]
+              dotnet: [3.1.405, 5.0.102]
             operations:
               - type: merge
                 match: [component]
@@ -33,11 +27,11 @@ jobs:
                 match: [component]
                 matrix:
                   component: [Consul]
-                  dotnet: [2.1.811]
+                  dotnet: [2.1.812]
               - type: add
                 match: [os, component]
                 matrix:
-                  os: [windows-2019]
+                  os: [windows-2016, windows-2019]
                   component: [Consul]
                   dotnet: ["4.7"]
     outputs:
@@ -45,9 +39,9 @@ jobs:
 
   build:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id
-    needs: setup
+    needs: setup-build-matrix
     strategy:
-      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.setup-build-matrix.outputs.matrix) }}
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
