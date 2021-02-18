@@ -107,13 +107,11 @@ jobs:
           then
             ./consul agent -dev -config-file test_config.json -log-file consul.log >consul-stdout.log 2>consul-stderr.log &
           fi
-          if [ "${{ steps.dotnet.outputs.framework }}" == "netcoreapp2.1" ]
+          if [ "${{ steps.dotnet.outputs.framework }}" != "netcoreapp2.1" ]
           then
-            logger="console;verbosity=normal"
-          else
-            logger="GitHubActions;report-warnings=false"
+            logger='--logger "GitHubActions;report-warnings=false"'
           fi
-          dotnet test --framework ${{ steps.dotnet.outputs.framework }} --configuration=Release -p:Channel=${{ steps.dotnet.outputs.channel }} --logger:"$logger" --no-build
+          dotnet test --framework ${{ steps.dotnet.outputs.framework }} --configuration=Release -p:Channel=${{ steps.dotnet.outputs.channel }} -v normal --no-build $logger
       - name: Upload Consul logs
         if: failure() && matrix.component == 'Consul'
         uses: actions/upload-artifact@v2
