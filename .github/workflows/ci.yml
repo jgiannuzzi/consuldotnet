@@ -108,7 +108,7 @@ jobs:
       - name: Build library
         run: dotnet build --framework ${{ steps.dotnet.outputs.libframework }} --configuration=Release -p:Channel=${{ steps.dotnet.outputs.channel }} -p:TreatWarningsAsErrors=true ${{ matrix.component }}
       - name: Build tests
-        run: dotnet build --framework ${{ steps.dotnet.outputs.framework }} --configuration=Release -p:Channel=${{ steps.dotnet.outputs.channel }} -p:TreatWarningsAsErrors=true ${{ matrix.component }}.Test
+        run: dotnet build --no-dependencies --framework ${{ steps.dotnet.outputs.framework }} --configuration=Release -p:Channel=${{ steps.dotnet.outputs.channel }} -p:TreatWarningsAsErrors=true ${{ matrix.component }}.Test
       - name: Run tests
         shell: bash
         run: |
