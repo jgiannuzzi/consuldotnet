@@ -78,7 +78,12 @@ jobs:
         shell: bash
         run: |
           IFS=':' read -ra dotnet <<< "$DOTNET"
-          libframework=$([ "${dotnet[0]}" == "net461" ] && echo "net461" || echo "netstandard2.0")
+          if [ "${dotnet[0]}" == "net461" ]
+          then
+            libframework=net461
+          else
+            libframework=netstandard2.0
+          fi
           echo "::set-output name=framework::${dotnet[0]}"
           echo "::set-output name=version::${dotnet[1]}"
           echo "::set-output name=channel::${dotnet[2]}"
