@@ -108,11 +108,11 @@ jobs:
           fi
           if [ "${{ steps.dotnet.outputs.framework }}" == "netcoreapp2.1" ]
           then
-            LOG='-v=Normal'
+            logger="console;verbosity=normal"
           else
-            LOG='--logger "GitHubActions;report-warnings=false"'
+            logger="GitHubActions;report-warnings=false"
           fi
-          dotnet test --framework ${{ steps.dotnet.outputs.framework }} --configuration=Release -p:Channel=${{ steps.dotnet.outputs.channel }} --no-build $LOG
+          dotnet test --framework ${{ steps.dotnet.outputs.framework }} --configuration=Release -p:Channel=${{ steps.dotnet.outputs.channel }} --logger:"$logger" --no-build
       - name: Upload Consul logs
         if: failure() && matrix.component == 'Consul'
         uses: actions/upload-artifact@v2
