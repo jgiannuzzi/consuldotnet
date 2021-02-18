@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFrameworks Condition="'$(Channel)' == 'experimental'">net5.0</TargetFrameworks>
     <AssemblyName>Consul.AspNetCore.Test</AssemblyName>
     <PackageId>Consul.AspNetCore.Test</PackageId>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
