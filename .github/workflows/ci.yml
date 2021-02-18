@@ -84,7 +84,8 @@ jobs:
         with:
           dotnet-version: ${{ steps.dotnet.outputs.version }}
       - name: Select .NET SDK
-        run: echo '{"sdk":{"version":"${{ steps.dotnet.outputs.version }}"}}' > global.json
+        if: steps.dotnet.outputs.framework != 'net461'
+        run: dotnet new globaljson --sdk-version ${{ steps.dotnet.outputs.version }}
       - name: Download Consul
         if: matrix.component == 'Consul'
         shell: bash
