@@ -6,9 +6,42 @@ on:
 
 env:
   DOTNET_NOLOGO: true
-  DOTNET_MULTILEVEL_LOOKUP: false
 
 jobs:
+
+  # Setup our build matrix
+  setup-build-matrix:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id
+    runs-on: ubuntu-18.04
+    outputs:
+      matrix: ${{ steps.build-matrix.outputs.matrix }}
+    steps:
+      - id: build-matrix
+        uses: jgiannuzzi/setup-build-matrix@v1
+        with:
+          config: |
+            matrix:
+              os: [ubuntu-18.04, windows-2019, macos-10.15]
+              component: [Consul, Consul.AspNetCore]
+              # dotnet: ['netcoreapp3.1:3.1.406', 'net5.0:5.0.103']
+              dotnet: ['netcoreapp3.1:3.1.406']
+            operations:
+              - type: merge
+                match: [component]
+                matrix:
+                  component: [Consul]
+                  consul: [1.6.10, 1.7.12, 1.8.8, 1.9.3]
+              - type: add
+                match: [component]
+                matrix:
+                  component: [Consul]
+                  dotnet: ['netcoreapp2.1:2.1.813']
+              - type: add
+                match: [os, component]
+                matrix:
+                  os: [windows-2019]
+                  component: [Consul]
+                  dotnet: ['net461:4.6.1']
 
   # Enforces the consistency of code formatting using `.editorconfig` and the `dotnet-format` tool.
   check-format:
@@ -17,10 +50,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 3.1.404
       - name: Restore tools
         run: dotnet tool restore
       - name: Check format
@@ -33,32 +62,28 @@ jobs:
   # and for .NET Standard 2.0.
   build:
     if: github.event_name == 'push' || github.event.pull_request.head.repo.id != github.event.pull_request.base.repo.id
+    needs: setup-build-matrix
     strategy:
-      matrix:
-        os: [ubuntu-18.04, windows-2019, macos-10.15]
-        component: [Consul, Consul.AspNetCore]
-        consul: [1.6.10, 1.7.10, 1.8.6, 1.9.0]
-        exclude:
-          - component: Consul.AspNetCore
-            consul: 1.7.10
-          - component: Consul.AspNetCore
-            consul: 1.8.6
-          - component: Consul.AspNetCore
-            consul: 1.9.0
+      matrix: ${{ fromJson(needs.setup-build-matrix.outputs.matrix) }}
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      # TODO remove this if we don't test it anymore
-      - name: Setup .NET Core SDK 2.1
+      - name: Split dotnet variables
+        id: dotnet
+        env:
+          DOTNET: ${{ matrix.dotnet }}
+        run: |
+          echo "::set-output name=framework::${DOTNET/:*/}"
+          echo "::set-output name=version::${DOTNET/*:/}"
+      - name: Setup .NET SDK
+        if: steps.dotnet.outputs.framework != 'net461'
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 2.1.811
-      - name: Setup .NET Core SDK 3.1
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 3.1.404
+          dotnet-version: ${{ steps.dotnet.outputs.version }}
+      - name: Select .NET SDK
+        run: echo '{"sdk":{"version":"${{ steps.dotnet.outputs.version }}"}}' > global.json
       - name: Download Consul
         if: matrix.component == 'Consul'
         shell: bash
@@ -69,7 +94,7 @@ jobs:
           unzip consul.zip
           rm consul.zip
       - name: Build
-        run: dotnet build --configuration=Release -p:TreatWarningsAsErrors=true ${{ matrix.component }}.Test
+        run: dotnet build --framework ${{ steps.dotnet.outputs.framework }} --configuration=Release -p:TreatWarningsAsErrors=true ${{ matrix.component }}.Test
       - name: Run tests
         shell: bash
         run: |
@@ -78,39 +103,46 @@ jobs:
           then
             ./consul agent -dev -config-file test_config.json -log-file consul.log >consul-stdout.log 2>consul-stderr.log &
           fi
-          dotnet test --configuration=Release --no-build --logger "GitHubActions;report-warnings=false"
+          if [ "${{ steps.dotnet.outputs.framework }}" != "netcoreapp2.1"]
+          then
+            LOG='--logger "GitHubActions;report-warnings=false"'
+          else
+            LOG='-v=Normal'
+          fi
+          dotnet test --framework ${{ steps.dotnet.outputs.framework }} --configuration=Release --no-build $LOG
       - name: Upload Consul logs
         if: failure() && matrix.component == 'Consul'
         uses: actions/upload-artifact@v2
         with:
-          name: consul-logs-${{ matrix.os }}_consul-${{ matrix.consul }}
+          name: consul-logs-${{ matrix.os }}_dotnet-${{ steps.dotnet.outputs.version }}_consul-${{ matrix.consul }}
           path: Consul.Test/consul*.log
-      - name: Create NuGet package
-        if: runner.os == 'Windows' && startsWith(matrix.consul, '1.6')
-        run: |
-          $prefix = "${{ matrix.component }}" -eq "Consul.AspNetCore" ? "Consul.AspNetCore_" : ""
-          if ("${{ github.ref }}" -match "^refs/tags/${prefix}v(\d+\.\d+.*)") {
-            $tag = $Matches[1]
-            $version = (Select-Xml -path ${{ matrix.component }}/${{ matrix.component }}.csproj -XPath "/Project/PropertyGroup/VersionPrefix/text()").node.Value
-            if (-not ($tag -eq $version)) {
-              echo "::error ::There is a mismatch between the project version ($version) and the tag ($tag)"
-              exit 1
-            }
-          } else {
-            # WORKAROUND: Add letter prefix to ensure that MSBuild treats
-            # the suffix as a string. e.g. '0313071' will fail as an invalid
-            # version string, but 'G0313071' will succeeded. It looks like
-            # the parser does not like numbers with a leading zero.
-            $suffix = 'g' + $(git rev-parse --short HEAD)
-            $params = "--version-suffix", $suffix
-          }
-          dotnet pack --configuration=Release --no-build @params ${{ matrix.component }}
-      - name: Upload NuGet package artifact
-        if: runner.os == 'Windows' && startsWith(matrix.consul, '1.6')
-        uses: actions/upload-artifact@v2
-        with:
-          name: nuget-package-${{ matrix.component }}
-          path: dist
+      # TODO have a different step that puts together the package
+      # - name: Create NuGet package
+      #   if: runner.os == 'Windows' && startsWith(matrix.consul, '1.6')
+      #   run: |
+      #     $prefix = "${{ matrix.component }}" -eq "Consul.AspNetCore" ? "Consul.AspNetCore_" : ""
+      #     if ("${{ github.ref }}" -match "^refs/tags/${prefix}v(\d+\.\d+.*)") {
+      #       $tag = $Matches[1]
+      #       $version = (Select-Xml -path ${{ matrix.component }}/${{ matrix.component }}.csproj -XPath "/Project/PropertyGroup/VersionPrefix/text()").node.Value
+      #       if (-not ($tag -eq $version)) {
+      #         echo "::error ::There is a mismatch between the project version ($version) and the tag ($tag)"
+      #         exit 1
+      #       }
+      #     } else {
+      #       # WORKAROUND: Add letter prefix to ensure that MSBuild treats
+      #       # the suffix as a string. e.g. '0313071' will fail as an invalid
+      #       # version string, but 'G0313071' will succeeded. It looks like
+      #       # the parser does not like numbers with a leading zero.
+      #       $suffix = 'g' + $(git rev-parse --short HEAD)
+      #       $params = "--version-suffix", $suffix
+      #     }
+      #     dotnet pack --configuration=Release --no-build @params ${{ matrix.component }}
+      # - name: Upload NuGet package artifact
+      #   if: runner.os == 'Windows' && startsWith(matrix.consul, '1.6')
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: nuget-package-${{ matrix.component }}
+      #     path: dist
 
   # Publish NuGet package when a tag is pushed.
   # Tests need to succeed for all components and on all platforms first,
@@ -141,6 +173,7 @@ jobs:
         with:
           name: nuget-package-${{ steps.get-component.outputs.component }}
           path: dist
+      # TODO this should probably just use the default dotnet?
       - name: Setup .NET Core SDK
         uses: actions/setup-dotnet@v1
         with:
