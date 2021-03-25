@@ -31,7 +31,7 @@ jobs:
                 match: [component]
                 matrix:
                   component: [Consul]
-                  consul: [1.6.10, 1.7.12, 1.8.8, 1.9.3]
+                  consul: [1.6.10, 1.7.13, 1.8.9, 1.9.4]
               - type: add
                 match: [component]
                 matrix:
