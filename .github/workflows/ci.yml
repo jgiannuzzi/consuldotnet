@@ -99,7 +99,7 @@ jobs:
           unzip consul.zip
           rm consul.zip
       - name: Build
-        run: dotnet build --framework ${{ steps.dotnet.outputs.framework }} --configuration=Release -p:Channel=${{ steps.dotnet.outputs.channel }} -p:TreatWarningsAsErrors=true ${{ matrix.component }}.Test
+        run: dotnet build --framework ${{ steps.dotnet.outputs.framework }} --configuration=Release -p:Channel=${{ steps.dotnet.outputs.channel }} -p:TreatWarningsAsErrors=true -v detailed ${{ matrix.component }}.Test
       - name: Run tests
         shell: bash
         run: |
