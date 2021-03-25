@@ -78,9 +78,11 @@ jobs:
         shell: bash
         run: |
           IFS=':' read -ra dotnet <<< "$DOTNET"
+          libframework=$([ "${dotnet[0]}" == "net461" ] && echo "net461" || echo "netstandard2.0")
           echo "::set-output name=framework::${dotnet[0]}"
           echo "::set-output name=version::${dotnet[1]}"
           echo "::set-output name=channel::${dotnet[2]}"
+          echo "::set-output name=libframework::$libframework"
       - name: Setup .NET SDK
         if: steps.dotnet.outputs.framework != 'net461'
         uses: actions/setup-dotnet@v1
@@ -98,8 +100,10 @@ jobs:
           curl -sSL https://releases.hashicorp.com/consul/${{ matrix.consul }}/consul_${{ matrix.consul }}_${SYSTEM}_amd64.zip -o consul.zip
           unzip consul.zip
           rm consul.zip
-      - name: Build
-        run: dotnet build --framework ${{ steps.dotnet.outputs.framework }} --configuration=Release -p:Channel=${{ steps.dotnet.outputs.channel }} -p:TreatWarningsAsErrors=true -v detailed ${{ matrix.component }}.Test
+      - name: Build library
+        run: dotnet build --framework ${{ steps.dotnet.outputs.libframework }} --configuration=Release -p:Channel=${{ steps.dotnet.outputs.channel }} -p:TreatWarningsAsErrors=true ${{ matrix.component }}
+      - name: Build tests
+        run: dotnet build --framework ${{ steps.dotnet.outputs.framework }} --configuration=Release -p:Channel=${{ steps.dotnet.outputs.channel }} -p:TreatWarningsAsErrors=true ${{ matrix.component }}.Test
       - name: Run tests
         shell: bash
         run: |
