@@ -1,10 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp3.1</TargetFrameworks>
-    <TargetFrameworks Condition="'$(OS)' == 'Windows_NT'">$(TargetFrameworks);net461</TargetFrameworks>
-    <TargetFrameworks Condition="'$(Channel)' == 'legacy'">netcoreapp2.1</TargetFrameworks>
-    <TargetFrameworks Condition="'$(Channel)' == 'experimental'">net5.0</TargetFrameworks>
+    <!--
+      Select target frameworks based on runtime availability. This prevents
+      getting test failures when the running them on a system where all the
+      runtimes are not installed.
+      We assume .NET Framework is available on Windows only.
+      We check for the presence of .NET Core runtimes on the file system.
+    -->
+    <TargetFrameworks Condition="'$(OS)' == 'Windows_NT'">net461</TargetFrameworks>
+    <TargetFrameworks Condition="'$(NetCoreRoot)' != '' And $([System.IO.Directory]::GetDirectories('$(NetCoreRoot)shared/Microsoft.NETCore.App', '2.1.*').Length) != 0">$(TargetFrameworks);netcoreapp2.1</TargetFrameworks>
+    <TargetFrameworks Condition="'$(NetCoreRoot)' != '' And $([System.IO.Directory]::GetDirectories('$(NetCoreRoot)shared/Microsoft.NETCore.App', '3.1.*').Length) != 0">$(TargetFrameworks);netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks Condition="'$(NetCoreRoot)' != '' And $([System.IO.Directory]::GetDirectories('$(NetCoreRoot)shared/Microsoft.NETCore.App', '5.0.*').Length) != 0">$(TargetFrameworks);net5.0</TargetFrameworks>
     <AssemblyName>Consul.Test</AssemblyName>
     <PackageId>Consul.Test</PackageId>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
