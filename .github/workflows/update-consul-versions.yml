@@ -12,9 +12,6 @@ jobs:
     environment: update-consul-versions
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
       - name: Install Step CLI
         env:
           VERSION: 0.19.0
